@@ -1,4 +1,4 @@
-name: getAllRepliesToKnownPots
+name: getAllRepliesToKnownPosts
 concurrency: get_context
 
 on:
@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Get latest release
         run: |
-          curl -s https://api.github.com/repos/nanos/mastodon_get_replies/releases/latest | jq .zipball_url | xargs wget -O download.zip
+          curl --retry 20 -s https://api.github.com/repos/nanos/mastodon_get_replies/releases/latest | jq .zipball_url | xargs wget -O download.zip
           unzip -j download.zip
           mkdir artifacts
           ls -lR
@@ -32,10 +32,14 @@ jobs:
           path: artifacts
       - name: Get Directory structure
         run: ls -lR
-      - run: python get_context.py ${{ secrets.ACCESS_TOKEN }} ${{ vars.MASTODON_SERVER }} ${{ vars.REPLY_INTERVAL_IN_HOURS }} ${{ vars.HOME_TIMELINE_LENGTH }} ${{ vars.MAX_FOLLOWINGS }} ${{ vars.USER }}
+      - run: python find_posts.py --lock-hours=0 --access-token=${{ secrets.ACCESS_TOKEN }} --server=${{ vars.MASTODON_SERVER }} --reply-interval-in-hours=${{ vars.REPLY_INTERVAL_IN_HOURS || 0 }} --home-timeline-length=${{ vars.HOME_TIMELINE_LENGTH || 0 }} --max-followings=${{ vars.MAX_FOLLOWINGS || 0 }} --user=${{ vars.USER }} --max-followers=${{ vars.MAX_FOLLOWERS || 0 }}  --http-timeout=${{ vars.HTTP_TIMEOUT || 5 }} --max-follow-requests=${{ vars.MAX_FOLLOW_REQUESTS || 0 }} --on-fail=${{ vars.ON_FAIL }} --on-start=${{ vars.ON_START }} --on-done=${{ vars.ON_DONE }} --max-bookmarks=${{ vars.MAX_BOOKMARKS || 0 }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: artifacts
           path: |
             artifacts
+      - name: Check out, so that we can keep the workflow alive
+        uses: actions/checkout@v3
+      - name: Keep workflow alive
+        uses: gautamkrishnar/keepalive-workflow@v1
