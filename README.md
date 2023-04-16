@@ -20,6 +20,12 @@ FediFetcher will store posts it has already pulled in, as well as profiles it ha
 
 For detailed information on the how and why, please read the [FediFetcher for Mastodon page](https://blog.thms.uk/fedifetcher?utm_source=github).
 
+## Supported servers
+
+FediFetcher makes use of the Mastodon API. It'll run against any instance implementing this API, and whilst it was built for Mastodon, it's been [confirmed working against Pleroma](https://fed.xnor.in/objects/6bd47928-704a-4cb8-82d6-87471d1b632f) as well.
+
+FediFetcher will pull in posts from any server that implements the Mastodon API, including Mastodon, Pleroma, Akkoma, Pixelfed, and probably others.
+
 ## Setup
 
 You can run FediFetcher either as a GitHub Action, as a scheduled cron job on your local machine/server, or from a pre-packed container.
@@ -59,11 +65,13 @@ If you want to, you can of course also run FediFetcher locally as a cron job:
 2. Install requirements: `pip install -r requirements.txt`
 3. Then simply run this script like so: `python find_posts.py --access-token=<TOKEN> --server=<SERVER>` etc.  (Read below, or run `python find_posts.py -h` to get a list of all options.)
  
-An example script can be found in the [`examples`](https://github.com/nanos/FediFetcher/tree/main/examples) folder.
+An [example script](./examples/FediFetcher.sh) can be found in the `examples` folder.
 
 When using a cronjob, we are using file based locking to avoid multiple overlapping executions of the script. The timeout period for the lock can be configured using `--lock-hours`.
 
 If you are running FediFetcher locally, my recommendation is to run it manually once, before turning on the cron job: The first run will be significantly slower than subsequent runs, and that will help you prevent overlapping during that first run.
+
+If you wish to [run FediFetcher for multiple users on your instance](https://blog.thms.uk/2023/04/muli-user-support-for-fedifetcher?utm_source=github), you can supply the `--access-token` argument multiple times, with different access tokens for different users. That will allow you to fetch replies and/or backfill profiles for multiple users on your account. Have a look at the [sample script provided](./examples/FediFetcher-multiple-users.sh).
 
 *Note:* if you wish to run FediFetcher using Windows Task Scheduler, you can rename the script to the `.pyw` extension instead of `.py`, and it will run silently, without opening a console window.
 
@@ -78,7 +86,7 @@ The same rules for running this as a cron job apply to running the container: do
 
 Persistent files are stored in `/app/artifacts` within the container, so you may want to map this to a local folder on your system.
 
-An example Kubernetes CronJob for running the container is included in the [`examples`](https://github.com/nanos/FediFetcher/tree/main/examples) folder.
+An [example Kubernetes CronJob](./examples/k8s-cronjob.yaml) for running the container is included in the `examples` folder.
 
 ### Configuration options
 
@@ -100,7 +108,7 @@ Please find the list of all configuration options, including descriptions, below
 
 | Environment Variable Name | Command line flag | Required? | Notes |
 |:---------------------------------------------------|:----------------------------------------------------|-----------|:------|
-| -- | `--access-token` | Yes | The access token. If using GitHub action, this needs to be provided as a Secret called  `ACCESS_TOKEN` |
+| -- | `--access-token` | Yes | The access token. If using GitHub action, this needs to be provided as a Secret called  `ACCESS_TOKEN`. If running as a cron job or a container, you can supply this argument multiple times, to [fetch posts for multiple users](https://blog.thms.uk/2023/04/muli-user-support-for-fedifetcher) on your instance. |
 |`MASTODON_SERVER`|`--server`|Yes|The domain only of your mastodon server (without `https://` prefix) e.g. `mstdn.thms.uk`. |
 | `HOME_TIMELINE_LENGTH` | `--home-timeline-length` | No | Provide to fetch remote replies to posts in the API-Key owner's home timeline. Determines how many posts we'll fetch replies for. Recommended value: `200`.
 | `REPLY_INTERVAL_IN_HOURS` | `--reply-interval-in-hours` | No | Provide to fetch remote replies to posts that have received replies from users on your own instance. Determines how far back in time we'll go to find posts that have received replies. Recommend value: `0` (disabled). Requires an access token with `admin:read:accounts`.
